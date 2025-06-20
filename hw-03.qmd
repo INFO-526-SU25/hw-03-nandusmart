@@ -357,12 +357,12 @@ covid_survey_summary_stats <- covid_survey_summary_stats |>
       "resp_will_recommend"
     ),
     response = recode(response,
-      "resp_safety" = "I believe the vaccine is safe",
-      "resp_feel_safe_at_work" = "The vaccine makes me feel safer at work",
-      "resp_concern_safety" = "I'm concerned about safety and side effects",
-      "resp_confidence_science" = "I trust the scientific vetting process",
-      "resp_trust_info" = "I trust the info I received about the vaccine",
-      "resp_will_recommend" = "I will recommend the vaccine to others"
+      "resp_safety" = "Based on my understanding, I believe the vaccine is safe",
+      "resp_feel_safe_at_work" = "Getting the vaccine will make me feel safer at work",
+      "resp_concern_safety" = "I am concerned about the safety and side effects of the vaccine",
+      "resp_confidence_science" = "II am confident in the scientific vetting process for the new COVID vaccines",
+      "resp_trust_info" = "I trust the information that I have received about the vaccines",
+      "resp_will_recommend" = "I will recommend the vaccine to family, friends, and community members"
     )
   )
 
@@ -402,4 +402,139 @@ ggplot(covid_survey_summary_stats, aes(x = mean, y = explanatory_value)) +
 
 ## 4 - COVID survey - re-reconstruct
 
+```{r}
+#| execute: 
+#| warning: false
+#| error: false
+covid_survey_summary_new <- covid_survey_longer |>
+  group_by(explanatory, explanatory_value, response) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, 0.25, na.rm = TRUE),
+            high = quantile(response_value, 0.75, na.rm = TRUE))
+```
+
+```{r}
+#| execute: 
+#| warning: false
+#| error: false
+
+
+
+covid_survey_summary_all_new <- covid_survey_longer |>
+  group_by(response) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, 0.25, na.rm = TRUE),
+            high = quantile(response_value, 0.75, na.rm = TRUE)
+            ) |>
+  mutate(
+    explanatory = "All",
+    explanatory_value = ""
+  )
+
+covid_survey_summary_all_new$explanatory_value <- as.factor(as.character(covid_survey_summary_all_new$explanatory_value))
+
+sapply(covid_survey_summary_all_new, class)
+
+```
+
+```{r}
+covid_survey_summary_stats_new <- bind_rows(covid_survey_summary_all_new, covid_survey_summary_new)
+
+covid_survey_summary_stats_new
+```
+
+```{r}
+covid_survey_summary_stats_new <- covid_survey_summary_stats_new |>
+  mutate(
+    explanatory_value = fct_relevel(explanatory_value, ">30", "26-30", "21-25", "<20"),
+    explanatory_value = fct_relevel(explanatory_value, "Female", "Male", "Non-binary third gender", "Prefer not to say"),
+    explanatory_value = fct_relevel(explanatory_value, "American Indian/Alaskan Native", "Asian", "Black/African American", "Native Hawaiian/Other Pacific Islander", "White"),
+    explanatory_value = fct_relevel(explanatory_value, "Non-Hispanic/Non-Latino", "Hispanic/Latino"),
+    explanatory_value = fct_relevel(explanatory_value, "Medical", "Nursing"),
+    explanatory_value = fct_relevel(explanatory_value, "No", "Yes")
+  )
+
+
+covid_survey_summary_stats_new <- covid_survey_summary_stats_new |>
+  mutate(
+    explanatory = fct_relevel(explanatory,
+      "All",
+      "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity",
+      "exp_profession", "exp_already_vax", "exp_flu_vax"
+    )
+  )
+
+covid_survey_summary_stats_new <- covid_survey_summary_stats_new |>
+  mutate(
+    explanatory = recode(explanatory,
+      "exp_age_bin" = "Age",
+      "exp_gender" = "Gender",
+      "exp_race" = "Race",
+      "exp_ethnicity" = "Ethnicity",
+      "exp_profession" = "Profession",
+      "exp_already_vax" = "Had COVID vaccine",
+      "exp_flu_vax" = "Had flu vaccine this year"
+    ),
+    response = fct_relevel(response,
+      "resp_safety",
+      "resp_feel_safe_at_work",
+      "resp_concern_safety",
+      "resp_confidence_science",
+      "resp_trust_info",
+      "resp_will_recommend"
+    ),
+    response = recode(response,
+      "resp_safety" = "Based on my understanding, I believe the vaccine is safe",
+      "resp_feel_safe_at_work" = "Getting the vaccine will make me feel safer at work",
+      "resp_concern_safety" = "I am concerned about the safety and side effects of the vaccine",
+      "resp_confidence_science" = "II am confident in the scientific vetting process for the new COVID vaccines",
+      "resp_trust_info" = "I trust the information that I have received about the vaccines",
+      "resp_will_recommend" = "I will recommend the vaccine to family, friends, and community members"
+    )
+  )
+
+covid_survey_summary_stats_new
+```
+
+```{r}
+ggplot(covid_survey_summary_stats_new, aes(x = mean, y = explanatory_value)) +
+  geom_point(size = 0.80) +
+  geom_errorbarh(aes(xmin = low, xmax = high), height = 0.3) +
+  facet_grid(
+    rows = vars(explanatory),
+    cols = vars(response),
+    scales = "free_y",
+    space = "free_y",
+    labeller = labeller(
+      explanatory = label_wrap_gen(15),
+      response = label_wrap_gen(15)
+    )
+  ) +
+  scale_x_continuous(breaks = 1:5) +
+  labs(
+    x = "Mean Likert score\n(Error bars show 25th–75th percentile)",
+    y = NULL
+  ) +
+  theme(
+    strip.text = element_text(size = 6),
+    strip.text.y = element_text(angle = 0),
+    axis.text.x = element_text(size = 6),
+    axis.text.y = element_text(size = 6),
+    axis.title.x = element_text(size = 8),
+    panel.spacing = unit(0.2, "lines"),
+    panel.grid = element_blank(),
+    strip.background = element_rect(fill = "gray90", color = "black")
+  )
+```
+
+This Plot differs majorly from the previous plot.
+
+The change of narrowing the error bar range between 25th-75th percentile, have significantly changed the plot as error bars that previously spanned nearly the full Likert scale are now more tightly centered around their respective means.
+
+The new plot reveals more about the distribution of responses with reduced error limit.
+
 ## 5 - COVID survey - another view
+
+
+```{r}
+```
