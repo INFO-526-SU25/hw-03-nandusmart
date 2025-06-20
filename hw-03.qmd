@@ -168,9 +168,29 @@ print(final_plot)
 ## 2 - COVID survey - interpret
 
 ```{r}
-#| label: label-me-2
+#| label: COVID survey - interpret
 
 ```
+
+This plot offers a comprehensive look at how medical and nursing students from various backgrounds responded to statements about the COVID-19 vaccine, using a Likert scale where lower scores signify greater agreement with positive vaccine sentiments
+
+### Asian students expressed more concern about safety/side effects of Vaccine
+
+Seems Asian students have a higher mean score than most other groups. This reflects the dynamic Cultural aspects & maybe historical experiences with medical procedures.
+
+Think it is little disappointing compared to, how they had high compliance with public health measures otherwise.
+
+### Black/African students report higher agreement recommending vaccine
+
+Despite broader societal data showing lower vaccine confidence among Black Americans (due to historic medical mistreatment and systemic inequities), this subgroup shows Strong agreement with recommedning vaccine.
+
+Only reason I believe this is as thy are healthcare students, who may have more access to scientific information.
+
+### Medical students tend to be more confident than nursing students
+
+Medical students show slightly lower (more confident) scores in: The scientific vetting process & on trusting the information received
+
+Medical students may have had more exposure to the bio-medical research or vaccine development process during training, resulting in higher trust in science. Agree with this assessment.
 
 ## 3 - COVID survey - reconstruct
 
