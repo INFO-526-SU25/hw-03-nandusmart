@@ -256,7 +256,7 @@ covid_survey_longer <- covid |>
     names_to = "explanatory",
     values_to = "explanatory_value"
   ) |>
-  drop_na(explanatory_value) |>
+  filter(!is.na(explanatory_value)) |>
   pivot_longer(
     cols = starts_with("resp_"),
     names_to = "response",
@@ -280,12 +280,9 @@ sapply(covid_survey_longer, class)
 
 covid_survey_summary <- covid_survey_longer |>
   group_by(explanatory, explanatory_value, response) |>
-  summarise(
-    mean_value = mean(response_value, na.rm = TRUE),
-    quantile_10 = quantile(response_value, probs = 0.1, na.rm = TRUE),
-    quantile_90 = quantile(response_value, probs = 0.9, na.rm = TRUE),
-    .groups = "drop"
-  )
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, 0.1, na.rm = TRUE),
+            high = quantile(response_value, 0.9, na.rm = TRUE))
 
 covid_survey_summary
 
@@ -295,16 +292,16 @@ covid_survey_summary
 
 covid_survey_summary_all <- covid_survey_longer |>
   group_by(response) |>
-  summarise(
-    mean_value = mean(response_value, na.rm = TRUE),
-    quantile_10 = quantile(response_value, 0.1, na.rm = TRUE),
-    quantile_90 = quantile(response_value, 0.9, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
+  summarise(mean = mean(response_value, na.rm = TRUE),
+            low = quantile(response_value, 0.1, na.rm = TRUE),
+            high = quantile(response_value, 0.9, na.rm = TRUE)
+            ) |>
   mutate(
     explanatory = "All",
-    explanatory_value = factor("")
+    explanatory_value = ""
   )
+
+covid_survey_summary_all$explanatory_value <- as.factor(as.character(covid_survey_summary_all$explanatory_value))
 
 sapply(covid_survey_summary_all, class)
 
@@ -369,11 +366,12 @@ covid_survey_summary_stats <- covid_survey_summary_stats |>
     )
   )
 
+covid_survey_summary_stats
 ```
 
 ```{r}
 ggplot(covid_survey_summary_stats, aes(x = mean, y = explanatory_value)) +
-  geom_point(size = 0.85) +
+  geom_point(size = 0.80) +
   geom_errorbarh(aes(xmin = low, xmax = high), height = 0.3) +
   facet_grid(
     rows = vars(explanatory),
@@ -398,7 +396,7 @@ ggplot(covid_survey_summary_stats, aes(x = mean, y = explanatory_value)) +
     axis.title.x = element_text(size = 8),
     panel.spacing = unit(0.2, "lines"),
     panel.grid = element_blank(),
-    strip.background = element_rect(fill = "gray88", color = "black")
+    strip.background = element_rect(fill = "gray90", color = "black")
   )
 ```
 
