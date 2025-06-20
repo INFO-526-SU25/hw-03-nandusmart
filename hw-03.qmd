@@ -544,8 +544,9 @@ The new plot reveals more about the distribution of responses with reduced error
 
 ## 5 - COVID survey - another view
 
+### 100% Diverging bar chart
 
-```{r}
+```{r ,fig.alt="Diverging bar chart comparing average responses to COVID-19 vaccine attitudes between those already vaccinated and those not yet vaccinated. The chart includes six statements related to vaccine safety, trust, and willingness to recommend. On average, already vaccinated individuals (shown in light blue bars) show stronger agreement with positive vaccine statements, while not-yet-vaccinated individuals (dark green bars) are more neutral or disagreeing. Notably, concern about safety and side effects is higher among the not-yet-vaccinated group"}
 #| execute: 
 #| warning: false
 #| error: false
@@ -629,15 +630,103 @@ covid_data_subset_summary |>
   coord_cartesian(clip = "off")
 
 ```
+#### Alt Text Added as {r ,fig.alt=".."} :
 
-```{r}
+Diverging bar chart comparing average responses to COVID-19 vaccine attitudes between those already vaccinated and those not yet vaccinated. The chart includes six statements related to vaccine safety, trust, and willingness to recommend. On average, already vaccinated individuals (shown in light blue bars) show stronger agreement with positive vaccine statements, while not-yet-vaccinated individuals (dark green bars) are more neutral or disagreeing. Notably, concern about safety and side effects is higher among the not-yet-vaccinated group.
 
+______________________________________________________
+
+### 100% stacked bar chart
+
+```{r stackedBar,fig.alt="A 100% stacked bar chart of six COVID-19 vaccine questions. Bars show proportions of Strongly Disagree to Strongly Agree responses, with agreement dominating most items except concern about side effects."}
+
+response_labels <- c(
+  "resp_safety" = "Based on my understanding, I believe the vaccine is safe",
+  "resp_confidence_science" = "I am confident in the scientific vetting process for the new COVID vaccines",
+  "resp_concern_safety" = "I am concerned about the safety and side effects of the vaccine",
+  "resp_feel_safe_at_work" = "Getting the vaccine will make me feel safer at work",
+  "resp_will_recommend" = "I will recommend the vaccine to family, friends, and community members",
+  "resp_trust_info" = "I trust the information that I have received about the vaccines"
+)
+covid_survey_longer <- covid_survey_longer |>
+  filter(!is.na(response_value)) |>
+  mutate(response_value = as.numeric(as.character(response_value)))
+
+mean_scores <- covid_survey_longer |>
+  group_by(response) |>
+  summarise(mean_value = mean(response_value, na.rm = FALSE))
+
+
+likert_summary <- covid_survey_longer |>
+  group_by(response, response_value) |>
+  summarise(count = n(), .groups = "drop") |>
+  group_by(response) |>
+  mutate(percent = count / sum(count) * 100) |>
+  ungroup() |>
+  mutate(response_value = as.numeric(as.character(response_value))) |>
+  left_join(mean_scores, by = "response") |>
+  mutate(
+    deviation = response_value - mean_value,
+    centered_percent = deviation * percent
+  )
+
+likert_summary <- likert_summary |>
+  filter(response_value %in% 1:5) |>
+  mutate(
+    response_value = factor(
+      response_value,
+      levels = 1:5,
+      labels = c("Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree")
+    )
+  )
+
+stackedBar <- ggplot(likert_summary, aes(
+  x = percent,
+  y = fct_rev(fct_relabel(factor(response), ~ response_labels[.x])),
+  fill = response_value
+)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  scale_fill_manual(
+  values = c(
+    "Strongly disagree" = "darkred",
+    "Disagree" = "orange",
+    "Neutral" = "blue",
+    "Agree" = "lightgreen",
+    "Strongly agree" = "darkgreen"
+  ),
+  name = "",
+  guide = guide_legend(reverse = TRUE)
+) +
+  labs(
+    title = "100% Bar Chart (Stacked Chart)",
+    x = "% of responses",
+    y = "Survey Question"
+  ) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 6),              
+    legend.key.size = unit(0.2, "cm"), 
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 8),
+    axis.text.y = element_text(size = 7),
+    plot.title.position = "plot"
+    
+  )
+
+print(stackedBar)
 
 ```
 
+#### Alt Text Added as {r stackedBar,fig.alt=".."} :
+
+A 100% stacked bar chart of six COVID-19 vaccine questions. Bars show proportions of Strongly Disagree to Strongly Agree responses, with agreement dominating most items except concern about side effects.
 
 
-```{r}
+### Plot Comparisons:
 
+The diverging bar chart and the 100% stacked bar chart both visualize survey responses about COVID-19 vaccines but serve different analytical purposes.
 
-```
+The diverging bar chart emphasizes the contrast in average sentiment between individuals who are already vaccinated and those who are not. By centering the bars around a neutral midpoint, it clearly reveals group-level differences in attitudes across statements, particularly highlighting that un-vaccinated individuals tend to express more concern and less trust. 
+
+In contrast, the 100% stacked bar chart provides a detailed view of the distribution of all response categories for each question. It shows the proportion of respondents who strongly agree, agree, are neutral, disagree, or strongly disagree, giving insight into the degree of consensus or polarization around each issue. 
