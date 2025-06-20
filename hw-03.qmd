@@ -194,6 +194,213 @@ Medical students may have had more exposure to the bio-medical research or vacci
 
 ## 3 - COVID survey - reconstruct
 
+```{r}
+#| label: COVID survey - reconstruct
+#| execute: 
+#| warning: false
+#| error: false
+
+covid <- read_csv("data/covid-survey.csv")
+#dim(covid)
+### Old Dimension
+#Re-Aligning to row1
+covid <- read_csv("data/covid-survey.csv", skip=1)
+dim(covid)
+
+```
+```{r}
+
+
+cols_to_check <- setdiff(names(covid), "response_id")
+covid <- covid |>
+  filter(!if_all(all_of(cols_to_check), is.na))
+
+dim(covid)
+
+```
+
+
+```{r}
+vax_levels <- c("0" = "No", "1" = "Yes")
+profession_levels <- c("0" = "Medical", "1" = "Nursing")
+gender_levels <- c("0" = "Male", "1" = "Female", "3" = "Non-binary third gender", "4" = "Prefer not to say")
+race_levels <- c(
+  "1" = "American Indian/Alaskan Native", 
+  "2" = "Asian", 
+  "3" = "Black/African American", 
+  "4" = "Native Hawaiian/Other Pacific Islander", 
+  "5" = "White"
+)
+ethnicity_levels <- c("1" = "Hispanic/Latino", "2" = "Non-Hispanic/Non-Latino")
+age_bin_levels <- c("0" = "<20", "20" = "21-25", "25" = "26-30", "30" = ">30")
+
+covid <- covid |>
+  mutate(
+    exp_already_vax = recode(exp_already_vax, !!!vax_levels),
+    exp_flu_vax = recode(exp_flu_vax, !!!vax_levels),
+    exp_profession = recode(exp_profession, !!!profession_levels),
+    exp_gender = recode(exp_gender, !!!gender_levels),
+    exp_race = recode(exp_race, !!!race_levels),
+    exp_ethnicity = recode(exp_ethnicity, !!!ethnicity_levels),
+    exp_age_bin = recode(exp_age_bin, !!!age_bin_levels)
+  )
+dim(covid)
+
+```
+
+
+```{r}
+covid_survey_longer <- covid |>
+  pivot_longer(
+    cols = starts_with("exp_"),
+    names_to = "explanatory",
+    values_to = "explanatory_value"
+  ) |>
+  drop_na(explanatory_value) |>
+  pivot_longer(
+    cols = starts_with("resp_"),
+    names_to = "response",
+    values_to = "response_value"
+  )
+
+covid_survey_longer
+```
+
+
+```{r}
+covid_survey_longer <- covid_survey_longer |>
+  mutate(response_value = as.numeric(response_value))
+
+sapply(covid_survey_longer, class)
+
+```
+
+
+```{r}
+
+covid_survey_summary <- covid_survey_longer |>
+  group_by(explanatory, explanatory_value, response) |>
+  summarise(
+    mean_value = mean(response_value, na.rm = TRUE),
+    quantile_10 = quantile(response_value, probs = 0.1, na.rm = TRUE),
+    quantile_90 = quantile(response_value, probs = 0.9, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+covid_survey_summary
+
+```
+
+```{r}
+
+covid_survey_summary_all <- covid_survey_longer |>
+  group_by(response) |>
+  summarise(
+    mean_value = mean(response_value, na.rm = TRUE),
+    quantile_10 = quantile(response_value, 0.1, na.rm = TRUE),
+    quantile_90 = quantile(response_value, 0.9, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    explanatory = "All",
+    explanatory_value = factor("")
+  )
+
+sapply(covid_survey_summary_all, class)
+
+covid_survey_summary_all
+```
+
+
+```{r}
+covid_survey_summary_stats <- bind_rows(covid_survey_summary_all, covid_survey_summary)
+
+covid_survey_summary_stats
+```
+
+```{r}
+
+covid_survey_summary_stats <- covid_survey_summary_stats |>
+  mutate(
+    explanatory_value = fct_relevel(explanatory_value, ">30", "26-30", "21-25", "<20"),
+    explanatory_value = fct_relevel(explanatory_value, "Female", "Male", "Non-binary third gender", "Prefer not to say"),
+    explanatory_value = fct_relevel(explanatory_value, "American Indian/Alaskan Native", "Asian", "Black/African American", "Native Hawaiian/Other Pacific Islander", "White"),
+    explanatory_value = fct_relevel(explanatory_value, "Non-Hispanic/Non-Latino", "Hispanic/Latino"),
+    explanatory_value = fct_relevel(explanatory_value, "Medical", "Nursing"),
+    explanatory_value = fct_relevel(explanatory_value, "No", "Yes")
+  )
+
+
+covid_survey_summary_stats <- covid_survey_summary_stats |>
+  mutate(
+    explanatory = fct_relevel(explanatory,
+      "All",
+      "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity",
+      "exp_profession", "exp_already_vax", "exp_flu_vax"
+    )
+  )
+
+covid_survey_summary_stats <- covid_survey_summary_stats |>
+  mutate(
+    explanatory = recode(explanatory,
+      "exp_age_bin" = "Age",
+      "exp_gender" = "Gender",
+      "exp_race" = "Race",
+      "exp_ethnicity" = "Ethnicity",
+      "exp_profession" = "Profession",
+      "exp_already_vax" = "Had COVID vaccine",
+      "exp_flu_vax" = "Had flu vaccine this year"
+    ),
+    response = fct_relevel(response,
+      "resp_safety",
+      "resp_feel_safe_at_work",
+      "resp_concern_safety",
+      "resp_confidence_science",
+      "resp_trust_info",
+      "resp_will_recommend"
+    ),
+    response = recode(response,
+      "resp_safety" = "I believe the vaccine is safe",
+      "resp_feel_safe_at_work" = "The vaccine makes me feel safer at work",
+      "resp_concern_safety" = "I'm concerned about safety and side effects",
+      "resp_confidence_science" = "I trust the scientific vetting process",
+      "resp_trust_info" = "I trust the info I received about the vaccine",
+      "resp_will_recommend" = "I will recommend the vaccine to others"
+    )
+  )
+
+```
+
+```{r}
+ggplot(covid_survey_summary_stats, aes(x = mean, y = explanatory_value)) +
+  geom_point(size = 0.85) +
+  geom_errorbarh(aes(xmin = low, xmax = high), height = 0.3) +
+  facet_grid(
+    rows = vars(explanatory),
+    cols = vars(response),
+    scales = "free_y",
+    space = "free_y",
+    labeller = labeller(
+      explanatory = label_wrap_gen(15),
+      response = label_wrap_gen(15)
+    )
+  ) +
+  scale_x_continuous(breaks = 1:5) +
+  labs(
+    x = "Mean Likert score\n(Error bars show 10th–90th percentile)",
+    y = NULL
+  ) +
+  theme(
+    strip.text = element_text(size = 6),
+    strip.text.y = element_text(angle = 0),
+    axis.text.x = element_text(size = 6),
+    axis.text.y = element_text(size = 6),
+    axis.title.x = element_text(size = 8),
+    panel.spacing = unit(0.2, "lines"),
+    panel.grid = element_blank(),
+    strip.background = element_rect(fill = "gray88", color = "black")
+  )
+```
 
 ## 4 - COVID survey - re-reconstruct
 
