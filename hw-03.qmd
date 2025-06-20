@@ -438,12 +438,18 @@ sapply(covid_survey_summary_all_new, class)
 ```
 
 ```{r}
+#| execute: 
+#| warning: false
+#| error: false
 covid_survey_summary_stats_new <- bind_rows(covid_survey_summary_all_new, covid_survey_summary_new)
 
 covid_survey_summary_stats_new
 ```
 
 ```{r}
+#| execute: 
+#| warning: false
+#| error: false
 covid_survey_summary_stats_new <- covid_survey_summary_stats_new |>
   mutate(
     explanatory_value = fct_relevel(explanatory_value, ">30", "26-30", "21-25", "<20"),
@@ -497,6 +503,9 @@ covid_survey_summary_stats_new
 ```
 
 ```{r}
+#| execute: 
+#| warning: false
+#| error: false
 ggplot(covid_survey_summary_stats_new, aes(x = mean, y = explanatory_value)) +
   geom_point(size = 0.80) +
   geom_errorbarh(aes(xmin = low, xmax = high), height = 0.3) +
@@ -537,4 +546,98 @@ The new plot reveals more about the distribution of responses with reduced error
 
 
 ```{r}
+#| execute: 
+#| warning: false
+#| error: false
+
+covid_data_subset = subset(covid, select = -c(exp_profession, exp_flu_vax, exp_gender, exp_race, exp_ethnicity, exp_age_bin))
+
+covid_data_subset <- covid_data_subset |>
+    pivot_longer(
+    cols = starts_with("resp_"),
+    names_to = "response",
+    values_to = "response_value"
+    ) |>
+  filter(!is.na(exp_already_vax))
+
+sapply(covid_data_subset, class)
+
+covid_data_subset$response_value <- as.numeric(as.character(covid_data_subset$response_value))
+
+covid_data_subset_summary <- covid_data_subset |>
+  group_by(response, exp_already_vax) |>
+  summarize(mean = mean(response_value, na.rm = TRUE))
+
+covid_data_subset_summary <- covid_data_subset_summary |>
+  mutate(mean_adj = ifelse(exp_already_vax == "No", -mean, mean))
+
+covid_data_subset_summary <- covid_data_subset_summary |>
+  mutate(
+          response = recode(response,
+      "resp_safety" = "Based on my understanding, I believe the vaccine is safe",
+      "resp_feel_safe_at_work" = "Getting the vaccine will make me feel safer at work",
+      "resp_concern_safety" = "I am concerned about the safety and side effects of the vaccine",
+      "resp_confidence_science" = "II am confident in the scientific vetting process for the new COVID vaccines",
+      "resp_trust_info" = "I trust the information that I have received about the vaccines",
+      "resp_will_recommend" = "I will recommend the vaccine to family, friends, and community members"
+    ))
+covid_data_subset_summary$response_wrap = str_wrap(covid_data_subset_summary$response, width = 45)
+
+
+covid_data_subset_summary |>
+  ggplot(aes(x = mean_adj, y = reorder(response_wrap, -mean_adj), fill = exp_already_vax)) +
+  geom_col(position = "identity", width = 0.6) +
+  labs(
+    y = "Responses", 
+    x = "Mean",
+    title = "Diverging Bar Chart",
+    subtitle = "1 (strongly agree) to 5 (strongly disagree)"
+  ) +
+  scale_x_continuous(
+    labels = abs,
+    limits = c(-5, 5),
+    breaks = c(-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5)
+    ) +
+  annotate(
+    geom = "text",
+    x = 0,
+    y = Inf,
+    label = "Not already vaccinated  ",
+    size = 3,
+    color = "darkgreen",
+    hjust = 1
+  ) +
+   annotate(
+    geom = "text",
+    x = 0,
+    y = Inf,
+    label = "  Already vaccinated ",
+    size = 3,
+    color = "lightblue",
+    hjust = 0
+  ) +
+  scale_fill_manual(values=c("darkgreen","lightblue")) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    legend.position = "none",
+    axis.title.x = element_text(size = 12),
+    axis.text.x = element_text(size = 8),
+    axis.text.y = element_text(size = 7),
+    plot.title.position = "plot",
+    plot.subtitle = element_text(size = 10)
+  ) +
+  coord_cartesian(clip = "off")
+
+```
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
 ```
